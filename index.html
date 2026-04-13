@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Tea Inventory</title>
+
+  <style>
+    body { font-family: Arial; padding: 20px; }
+    table { border-collapse: collapse; width: 100%; font-size: 12px; }
+    th, td { border: 1px solid #ddd; padding: 6px; text-align: center; }
+    th { background: green; color: white; }
+  </style>
+</head>
+
+<body>
+
+<h2>Tea Inventory System</h2>
+
+<table>
+<thead>
+<tr>
+<th>DATE</th>
+<th>MARK</th>
+<th>INV.NO</th>
+<th>GRADE</th>
+<th>BAGS</th>
+<th>KG/BAG</th>
+<th>TOTAL</th>
+<th>A-B-C-D</th>
+<th>SALE NO</th>
+<th>ALLOTMENT DATE</th>
+<th>BROKER</th>
+<th>SALE DATE</th>
+<th>RATE</th>
+<th>W/H</th>
+<th>STATUS</th>
+</tr>
+</thead>
+
+<tbody id="table-body"></tbody>
+</table>
+
+<script>
+
+const SHEET_ID = "1O0QWzMQXTKdL9QWEcXyBPZvNAdNT98e1fc_LD8d7ft8";
+
+// 🔥 This is Google internal JSON API (works without publish)
+const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json`;
+
+fetch(url)
+  .then(res => res.text())
+  .then(data => {
+
+    // Remove weird Google wrapper
+    const json = JSON.parse(data.substring(47).slice(0, -2));
+
+    const rows = json.table.rows;
+    const table = document.getElementById("table-body");
+
+    rows.forEach(r => {
+      const cols = r.c;
+
+      const tr = document.createElement("tr");
+
+      tr.innerHTML = `
+        <td>${cols[0]?.v || ""}</td>
+        <td>${cols[1]?.v || ""}</td>
+        <td>${cols[2]?.v || ""}</td>
+        <td>${cols[3]?.v || ""}</td>
+        <td>${cols[4]?.v || ""}</td>
+        <td>${cols[5]?.v || ""}</td>
+        <td>${cols[6]?.v || ""}</td>
+        <td>${cols[7]?.v || ""}</td>
+        <td>${cols[8]?.v || ""}</td>
+        <td>${cols[9]?.v || ""}</td>
+        <td>${cols[10]?.v || ""}</td>
+        <td>${cols[11]?.v || ""}</td>
+        <td>${cols[12]?.v || ""}</td>
+        <td>${cols[13]?.v || ""}</td>
+        <td>${cols[14]?.v || ""}</td>
+      `;
+
+      table.appendChild(tr);
+    });
+
+  })
+  .catch(err => {
+    console.error(err);
+    alert("Still error – check sheet sharing");
+  });
+
+</script>
+
+</body>
+</html>
