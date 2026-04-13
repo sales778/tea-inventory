@@ -1,120 +1,141 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Tea Inventory</title>
-
+  <meta charset="UTF-8">
+  <title>Tea Inventory - Multi-Sheet</title>
   <style>
-    body { font-family: Arial; padding: 20px; }
-    table { border-collapse: collapse; width: 100%; font-size: 12px; }
+    body { font-family: Arial; padding: 20px; background-color: #f9f9f9; }
+    table { border-collapse: collapse; width: 100%; font-size: 12px; background: white; }
     th, td { border: 1px solid #ddd; padding: 6px; text-align: center; }
-    th { background: green; color: white; }
+    th { background: green; color: white; position: sticky; top: 0; }
+    tr:nth-child(even) { background-color: #f2f2f2; }
+    .controls { margin-bottom: 15px; background: #eee; padding: 15px; border-radius: 5px; }
+    .status-sold { color: red; font-weight: bold; }
+    .status-unsold { color: green; font-weight: bold; }
   </style>
 </head>
 
 <body>
 
-<h2>Tea Inventory System</h2>
-<input type="text" id="search" placeholder="Search anything..." style="padding:8px; width:250px; margin-bottom:10px;">
-<select id="statusFilter" style="padding:8px; margin-left:10px;">
-  <option value="">All Status</option>
-  <option value="SOLD">SOLD</option>
-  <option value="UNSOLD">UNSOLD</option>
-</select>
-<h3>Total KG: <span id="totalKg">0</span></h3>
+<h2>Tea Inventory System (Multi-Sheet)</h2>
+
+<div class="controls">
+  <input type="text" id="search" placeholder="Search anything..." style="padding:8px; width:250px;">
+  <select id="statusFilter" style="padding:8px; margin-left:10px;">
+    <option value="">All Status</option>
+    <option value="SOLD">SOLD</option>
+    <option value="UNSOLD">UNSOLD</option>
+  </select>
+  <h3 style="margin-top:10px;">Total KG: <span id="totalKg">0</span></h3>
+</div>
 
 <table>
-<thead>
-<tr>
-<th>DATE</th>
-<th>MARK</th>
-<th>INV.NO</th>
-<th>GRADE</th>
-<th>BAGS</th>
-<th>KG/BAG</th>
-<th>TOTAL</th>
-<th>A-B-C-D</th>
-<th>SALE NO</th>
-<th>ALLOTMENT DATE</th>
-<th>BROKER</th>
-<th>SALE DATE</th>
-<th>RATE</th>
-<th>W/H</th>
-<th>STATUS</th>
-</tr>
-</thead>
-
-<tbody id="table-body"></tbody>
+  <thead>
+    <tr>
+      <th>DATE</th>
+      <th>MARK</th>
+      <th>INV.NO</th>
+      <th>GRADE</th>
+      <th>BAGS</th>
+      <th>KG/BAG</th>
+      <th>TOTAL</th>
+      <th>A-B-C-D</th>
+      <th>SALE NO</th>
+      <th>ALLOTMENT DATE</th>
+      <th>BROKER</th>
+      <th>SALE DATE</th>
+      <th>RATE</th>
+      <th>W/H</th>
+      <th>STATUS</th>
+    </tr>
+  </thead>
+  <tbody id="table-body">
+    <tr><td colspan="15">Loading data from multiple sources...</td></tr>
+  </tbody>
 </table>
 
 <script>
-
-
-const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSjv-zCgncu_aKEl3SAiluxOpLjPMxe1plfltAKLCaPAjhtooInavNPBSyfFvG7nDSCWYlovWde3B76/pub?output=csv";
+// 1. ADD ALL YOUR SHEET LINKS HERE
+const csvUrls = [
+  "https://docs.google.com/spreadsheets/d/e/2PACX-1vSjv-zCgncu_aKEl3SAiluxOpLjPMxe1plfltAKLCaPAjhtooInavNPBSyfFvG7nDSCWYlovWde3B76/pub?gid=0&output=csv",
+  "https://docs.google.com/spreadsheets/d/e/2PACX-1vSjv-zCgncu_aKEl3SAiluxOpLjPMxe1plfltAKLCaPAjhtooInavNPBSyfFvG7nDSCWYlovWde3B76/pub?output=csv",
+  "https://docs.google.com/spreadsheets/d/e/2PACX-1vSjv-zCgncu_aKEl3SAiluxOpLjPMxe1plfltAKLCaPAjhtooInavNPBSyfFvG7nDSCWYlovWde3B76/pub?output=csv",
+  // "PASTE_YOUR_THIRD_SHEET_LINK_HERE"
+];
 
 let allData = [];
 
-fetch(csvUrl)
-  .then(res => res.text())
-  .then(data => {
+// Fetch all sheets at once
+Promise.all(csvUrls.map(url => fetch(url).then(res => res.text())))
+  .then(allSheetTexts => {
+    allData = []; // Clear current data
 
-    const rows = data.trim().split("\n");
+    allSheetTexts.forEach(csvText => {
+      const rows = csvText.trim().split("\n");
+      
+      // Map rows, skipping header (slice(1))
+      const parsedRows = rows.slice(1).map(row => {
+        // Advanced split to handle commas inside quotes
+        return row.split(/,(?=(?:[^"]*"){2})*[^"]*$/).map(c => c.replace(/"/g, '').trim());
+      });
 
-    allData = rows.slice(1).map(row => row.split(","));
+      // Combine this sheet's data into the main array
+      allData = allData.concat(parsedRows);
+    });
+
+    // Remove any completely empty rows
+    allData = allData.filter(cols => cols.length > 5);
 
     renderTable(allData);
+  })
+  .catch(err => {
+    console.error(err);
+    document.getElementById("table-body").innerHTML = "<tr><td colspan='15' style='color:red;'>Error loading data from one or more sheets.</td></tr>";
   });
 
 function renderTable(data) {
   const table = document.getElementById("table-body");
   table.innerHTML = "";
-
   let total = 0;
 
   data.forEach(cols => {
-
-    if(cols.length < 10) return;
-
-    total += Number(cols[6]) || 0; // TOTAL column
+    total += Number(cols[6]) || 0;
 
     const tr = document.createElement("tr");
-
-    tr.innerHTML = cols.map(c => `<td>${c}</td>`).join("");
+    
+    // Create cells and color the status column
+    tr.innerHTML = cols.map((c, index) => {
+      let styleClass = "";
+      if (index === 14) { // STATUS Column
+        if (c.toUpperCase() === "SOLD") styleClass = "class='status-sold'";
+        if (c.toUpperCase() === "UNSOLD") styleClass = "class='status-unsold'";
+      }
+      return `<td ${styleClass}>${c}</td>`;
+    }).join("");
 
     table.appendChild(tr);
   });
 
-  document.getElementById("totalKg").innerText = total;
+  document.getElementById("totalKg").innerText = total.toLocaleString();
 }
 
-// 🔍 SEARCH
-document.getElementById("search").addEventListener("input", function() {
-  applyFilters();
-});
-
-// 🎯 FILTER
-document.getElementById("statusFilter").addEventListener("change", function() {
-  applyFilters();
-});
-
+// Search and Filter logic
 function applyFilters() {
-
   const search = document.getElementById("search").value.toLowerCase();
   const status = document.getElementById("statusFilter").value;
 
   const filtered = allData.filter(cols => {
-
     const rowText = cols.join(" ").toLowerCase();
-
     const matchSearch = rowText.includes(search);
-
-    const matchStatus = status === "" || cols[14] === status;
-
+    const matchStatus = status === "" || (cols[14] && cols[14].trim() === status);
     return matchSearch && matchStatus;
   });
 
   renderTable(filtered);
 }
 
+document.getElementById("search").addEventListener("input", applyFilters);
+document.getElementById("statusFilter").addEventListener("change", applyFilters);
 
 </script>
 
