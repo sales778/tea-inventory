@@ -14,6 +14,13 @@
 <body>
 
 <h2>Tea Inventory System</h2>
+<input type="text" id="search" placeholder="Search anything..." style="padding:8px; width:250px; margin-bottom:10px;">
+<select id="statusFilter" style="padding:8px; margin-left:10px;">
+  <option value="">All Status</option>
+  <option value="SOLD">SOLD</option>
+  <option value="UNSOLD">UNSOLD</option>
+</select>
+<h3>Total KG: <span id="totalKg">0</span></h3>
 
 <table>
 <thead>
@@ -41,52 +48,73 @@
 
 <script>
 
-const SHEET_ID = "1O0QWzMQXTKdL9QWEcXyBPZvNAdNT98e1fc_LD8d7ft8";
 
-// 🔥 This is Google internal JSON API (works without publish)
-const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json`;
+const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSjv-zCgncu_aKEl3SAiluxOpLjPMxe1plfltAKLCaPAjhtooInavNPBSyfFvG7nDSCWYlovWde3B76/pub?output=csv";
 
-fetch(url)
+let allData = [];
+
+fetch(csvUrl)
   .then(res => res.text())
   .then(data => {
 
-    // Remove weird Google wrapper
-    const json = JSON.parse(data.substring(47).slice(0, -2));
+    const rows = data.trim().split("\n");
 
-    const rows = json.table.rows;
-    const table = document.getElementById("table-body");
+    allData = rows.slice(1).map(row => row.split(","));
 
-    rows.forEach(r => {
-      const cols = r.c;
-
-      const tr = document.createElement("tr");
-
-      tr.innerHTML = `
-        <td>${cols[0]?.v || ""}</td>
-        <td>${cols[1]?.v || ""}</td>
-        <td>${cols[2]?.v || ""}</td>
-        <td>${cols[3]?.v || ""}</td>
-        <td>${cols[4]?.v || ""}</td>
-        <td>${cols[5]?.v || ""}</td>
-        <td>${cols[6]?.v || ""}</td>
-        <td>${cols[7]?.v || ""}</td>
-        <td>${cols[8]?.v || ""}</td>
-        <td>${cols[9]?.v || ""}</td>
-        <td>${cols[10]?.v || ""}</td>
-        <td>${cols[11]?.v || ""}</td>
-        <td>${cols[12]?.v || ""}</td>
-        <td>${cols[13]?.v || ""}</td>
-        <td>${cols[14]?.v || ""}</td>
-      `;
-
-      table.appendChild(tr);
-    });
-
-  })
-  .catch(err => {
-    console.error(err);
-    alert("Still error – check sheet sharing");
+    renderTable(allData);
   });
+
+function renderTable(data) {
+  const table = document.getElementById("table-body");
+  table.innerHTML = "";
+
+  let total = 0;
+
+  data.forEach(cols => {
+
+    if(cols.length < 10) return;
+
+    total += Number(cols[6]) || 0; // TOTAL column
+
+    const tr = document.createElement("tr");
+
+    tr.innerHTML = cols.map(c => `<td>${c}</td>`).join("");
+
+    table.appendChild(tr);
+  });
+
+  document.getElementById("totalKg").innerText = total;
+}
+
+// 🔍 SEARCH
+document.getElementById("search").addEventListener("input", function() {
+  applyFilters();
+});
+
+// 🎯 FILTER
+document.getElementById("statusFilter").addEventListener("change", function() {
+  applyFilters();
+});
+
+function applyFilters() {
+
+  const search = document.getElementById("search").value.toLowerCase();
+  const status = document.getElementById("statusFilter").value;
+
+  const filtered = allData.filter(cols => {
+
+    const rowText = cols.join(" ").toLowerCase();
+
+    const matchSearch = rowText.includes(search);
+
+    const matchStatus = status === "" || cols[14] === status;
+
+    return matchSearch && matchStatus;
+  });
+
+  renderTable(filtered);
+}
+
 
 </script>
 
